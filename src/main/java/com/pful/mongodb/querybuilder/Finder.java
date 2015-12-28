@@ -1,31 +1,49 @@
 package com.pful.mongodb.querybuilder;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.pful.mongodb.querybuilder.TemplateFieldOperation.convertNameToVariable;
 
 public class Finder
 {
-	private JsonParser jsonParser = new JsonParser();
+	private static Map<String, TemplateBuilder> templates = new HashMap<>();
 
-	private String collectionName;
 	private Expression root = new Expression();
 	private List<JsonObject> conditionList = new ArrayList<>();
 
-	public Finder(final String collectionName)
+	public static TemplateBuilder.TemplateExpression registerTemplate(final String alias)
 	{
-		this.collectionName = collectionName;
+		final Finder finder = new Finder();
+		final TemplateBuilder builder = finder.new TemplateBuilder(finder);
+		templates.put(alias, builder);
+		return builder.root;
 	}
 
-	public static Expression inCollection(final String name)
+	public static TemplateBuilder.VariableBinder openQuery(final String alias)
+			throws QueryBuilderException
 	{
-		final Finder finder = new Finder(name);
+		checkArgument(!alias.isEmpty());
+
+		if (!templates.containsKey(alias)) {
+			throw new QueryBuilderException("No exists such query.");
+		}
+
+		final TemplateBuilder builder = templates.get(alias);
+		return builder.new VariableBinder();
+	}
+
+
+	public static Expression newQuery()
+	{
+		final Finder finder = new Finder();
 		return finder.root;
 	}
 
@@ -33,11 +51,8 @@ public class Finder
 	{
 		final JsonObject rootNode = new JsonObject();
 
-		for (final JsonObject jsonElement : conditionList) {
-			for (final Map.Entry<String, JsonElement> entry : jsonElement.entrySet()) {
-				rootNode.add(entry.getKey(), entry.getValue());
-			}
-		}
+		conditionList.stream().forEach(e -> e.entrySet().stream().forEach(
+				entry -> rootNode.add(entry.getKey(), entry.getValue())));
 
 		return rootNode;
 	}
@@ -47,55 +62,44 @@ public class Finder
 		JsonElement toJson();
 	}
 
-	public interface ValueOperator<TReturn>
+	public static class TemplateStatement
+			extends Statement
 	{
-		TReturn is(final String value);
+		private String fieldName;
+		private String variableName;
 
-		TReturn is(final Number value);
-
-		TReturn eq(final Number value);
-
-		TReturn ne(final Number value);
-
-		TReturn gt(final Number value);
-
-		TReturn gte(final Number value);
-
-		TReturn lt(final Number value);
-
-		TReturn lte(final Number value);
-
-		TReturn in(final Collection<String> elements);
-
-		TReturn nin(final Collection<String> elements);
-
-		TReturn exists(final String name);
+		public TemplateStatement(final String fieldName, final String variableName, final JsonObject jsonElement)
+		{
+			super(jsonElement);
+			this.fieldName = fieldName;
+			this.variableName = variableName;
+		}
 	}
 
 	public static class Statement
 			implements Query
 	{
-		final JsonElement jsonElement;
+		final JsonObject jsonObject;
 
-		public Statement(final JsonElement jsonElement)
+		public Statement(final JsonObject jsonObject)
 		{
-			this.jsonElement = jsonElement;
+			this.jsonObject = jsonObject;
 		}
 
 		public JsonElement toJson()
 		{
-			return jsonElement;
+			return jsonObject;
 		}
 	}
 
 	public class Expression
 			implements Query
 	{
-		public Expression allOf(final Query... quries)
+		public Expression allOf(final Query... queries)
 		{
-			final JsonObject subDoc = new JsonObject();
-			subDoc.add("$and", makeJsonArray(quries));
-			conditionList.add(subDoc);
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.add("$and", makeJsonArray(queries));
+			conditionList.add(jsonObject);
 			return this;
 		}
 
@@ -110,19 +114,19 @@ public class Finder
 			return jsonArray;
 		}
 
-		public Expression anyOf(final Query... quries)
+		public Expression anyOf(final Query... queries)
 		{
-			final JsonObject subDoc = new JsonObject();
-			subDoc.add("$or", makeJsonArray(quries));
-			conditionList.add(subDoc);
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.add("$or", makeJsonArray(queries));
+			conditionList.add(jsonObject);
 			return this;
 		}
 
-		public Expression noneOf(final Query... quries)
+		public Expression noneOf(final Query... queries)
 		{
-			final JsonObject subDoc = new JsonObject();
-			subDoc.add("$nor", makeJsonArray(quries));
-			conditionList.add(subDoc);
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.add("$nor", makeJsonArray(queries));
+			conditionList.add(jsonObject);
 			return this;
 		}
 
@@ -155,7 +159,7 @@ public class Finder
 			final JsonObject jsonObject = new JsonObject();
 			jsonObject.addProperty(name, value);
 			conditionList.add(jsonObject);
-			return this.parentExpression;
+			return parentExpression;
 		}
 
 		@Override
@@ -164,7 +168,7 @@ public class Finder
 			final JsonObject jsonObject = new JsonObject();
 			jsonObject.addProperty(name, value);
 			conditionList.add(jsonObject);
-			return this.parentExpression;
+			return parentExpression;
 		}
 
 		@Override
@@ -173,96 +177,436 @@ public class Finder
 			return is(value);
 		}
 
-		private void addOperationField(final String operationName, final Number value)
-		{
-			final JsonObject operationNode = new JsonObject();
-			operationNode.addProperty(operationName, value);
-
-			makeField(operationNode);
-		}
-
-		private void makeField(final JsonElement jsonElement)
-		{
-			final JsonObject node = new JsonObject();
-			node.add(name, jsonElement);
-
-			conditionList.add(node);
-		}
-
 		@Override
 		public Expression ne(final Number value)
 		{
-			addOperationField("$ne", value);
-			return parentExpression;
+			return addOperationField("$ne", value);
 		}
 
 		@Override
 		public Expression gt(final Number value)
 		{
-			addOperationField("$gt", value);
-			return parentExpression;
+			return addOperationField("$gt", value);
 		}
 
 		@Override
 		public Expression gte(final Number value)
 		{
-			addOperationField("$gte", value);
-			return parentExpression;
+			return addOperationField("$gte", value);
 		}
 
 		@Override
 		public Expression lt(final Number value)
 		{
-			addOperationField("lt", value);
-			return parentExpression;
+			return addOperationField("$lt", value);
 		}
 
 		@Override
 		public Expression lte(final Number value)
 		{
-			addOperationField("lte", value);
-			return parentExpression;
+			return addOperationField("$lte", value);
 		}
 
 		@Override
-		public Expression in(final Collection<String> elements)
+		public Expression inStringCollection(final Collection<String> collection)
 		{
-			final JsonArray elementArray = new JsonArray();
-			for (final String element : elements) {
-				elementArray.add(element);
-			}
-
-			final JsonObject operationNode = new JsonObject();
-			operationNode.add("$in", elementArray);
-
-			makeField(operationNode);
-			return parentExpression;
+			final JsonArray jsonArray = new JsonArray();
+			collection.stream().forEach(jsonArray::add);
+			return in(jsonArray);
 		}
 
 		@Override
-		public Expression nin(final Collection<String> elements)
+		public Expression inNumberCollection(final Collection<Number> collection)
 		{
-			final JsonArray elementArray = new JsonArray();
-			for (final String element : elements) {
-				elementArray.add(element);
-			}
+			final JsonArray jsonArray = new JsonArray();
+			collection.stream().forEach(jsonArray::add);
+			return in(jsonArray);
+		}
 
+		private Expression in(final JsonArray jsonArray)
+		{
 			final JsonObject operationNode = new JsonObject();
-			operationNode.add("$nin", elementArray);
+			operationNode.add("$in", jsonArray);
 
-			makeField(operationNode);
-			return parentExpression;
+			return makeField(operationNode);
 		}
 
 		@Override
-		public Expression exists(final String name)
+		public Expression ninStringCollection(final Collection<String> collection)
 		{
-			final JsonObject operationNode = new JsonObject();
-			operationNode.addProperty("$exists", name);
+			final JsonArray jsonArray = new JsonArray();
+			collection.stream().forEach(jsonArray::add);
+			return nin(jsonArray);
+		}
 
-			makeField(operationNode);
+		@Override
+		public Expression ninNumberCollection(final Collection<Number> collection)
+		{
+			final JsonArray jsonArray = new JsonArray();
+			collection.stream().forEach(jsonArray::add);
+			return nin(jsonArray);
+		}
+
+		private Expression nin(final JsonArray jsonArray)
+		{
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.add("$nin", jsonArray);
+
+			return makeField(jsonObject);
+		}
+
+		@Override
+		public Expression exists()
+		{
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.addProperty("$exists", true);
+			return makeField(jsonObject);
+		}
+
+		private Expression addOperationField(final String operationName, final Number value)
+		{
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.addProperty(operationName, value);
+
+			return makeField(jsonObject);
+		}
+
+		private Expression makeField(final JsonElement jsonElement)
+		{
+			final JsonObject jsonObject = new JsonObject();
+			jsonObject.add(name, jsonElement);
+
+			conditionList.add(jsonObject);
 			return parentExpression;
 		}
+
 	}
 
+	/**
+	 * Created by daeyeon on 12/28/15.
+	 */
+	public class TemplateBuilder
+	{
+		private final Multimap<String, TemplateVariable> variables = ArrayListMultimap.create();
+		private Finder finder;
+		private TemplateExpression root = new TemplateExpression();
+
+		public TemplateBuilder(final Finder finder)
+		{
+			this.finder = finder;
+		}
+
+		private class TemplateVariable
+		{
+			public String fieldName;
+			public JsonObject jsonObject;
+
+			public TemplateVariable(final String name, final JsonObject jsonObject)
+			{
+				this.fieldName = name;
+				this.jsonObject = jsonObject;
+			}
+
+			public void transform(final String variableName, final String value)
+			{
+				jsonObject.addProperty(fieldName, value);
+			}
+
+			public void transform(final String variableName, final Number value)
+			{
+				jsonObject.addProperty(fieldName, value);
+			}
+
+			public void transform(final String variableName, final JsonArray jsonArray)
+			{
+				jsonObject.add(fieldName, jsonArray);
+			}
+		}
+
+		private class ExistsTemplateVariable
+				extends TemplateVariable
+		{
+			public ExistsTemplateVariable(final String name, final JsonObject jsonObject)
+			{
+				super(name, jsonObject);
+			}
+
+			@Override
+			public void transform(final String variableName, final String value)
+			{
+				jsonObject.remove(fieldName);
+
+				final JsonObject existsObject = new JsonObject();
+				existsObject.addProperty("$exists", true);
+
+				jsonObject.add(value, existsObject);
+			}
+
+			@Override
+			public void transform(final String variableName, final Number value)
+			{
+				System.out.println(variableName);
+			}
+
+			@Override
+			public void transform(final String variableName, final JsonArray jsonArray)
+			{
+				System.out.println(variableName);
+			}
+		}
+
+		public class TemplateExpression
+				extends Expression
+		{
+			@Override
+			public TemplateExpression allOf(final Query... queries)
+			{
+				for (final Query query : queries) {
+					if (query instanceof TemplateStatement) {
+						final TemplateStatement statement = (TemplateStatement) query;
+						variables.put(statement.fieldName, new TemplateVariable(statement.variableName, statement.jsonObject));
+					}
+				}
+
+				return (TemplateExpression) super.allOf(queries);
+			}
+
+			@Override
+			public TemplateExpression anyOf(final Query... queries)
+			{
+				for (final Query query : queries) {
+					if (query instanceof TemplateStatement) {
+						final TemplateStatement statement = (TemplateStatement) query;
+						variables.put(statement.fieldName, new TemplateVariable(statement.variableName, statement.jsonObject));
+					}
+				}
+
+				return (TemplateExpression) super.anyOf(queries);
+			}
+
+			@Override
+			public TemplateExpression noneOf(final Query... queries)
+			{
+				for (final Query query : queries) {
+					if (query instanceof TemplateStatement) {
+						final TemplateStatement statement = (TemplateStatement) query;
+						variables.put(statement.fieldName, new TemplateVariable(statement.variableName, statement.jsonObject));
+					}
+				}
+
+				return (TemplateExpression) super.noneOf(queries);
+			}
+
+			public TemplateExpressionOperation templateField(final String name)
+			{
+				return new TemplateExpressionOperation(name, this);
+			}
+
+		}
+
+		public class TemplateExpressionOperation
+				implements TemplateValueOperator<TemplateExpression>
+		{
+			private String name;
+			private TemplateExpression parentExpression;
+
+			public TemplateExpressionOperation(final String name, final TemplateExpression parentExpression)
+			{
+				this.name = name;
+				this.parentExpression = parentExpression;
+			}
+
+			@Override
+			public TemplateExpression is()
+			{
+				return is(name);
+			}
+
+			@Override
+			public TemplateExpression is(final String variableName)
+			{
+				final JsonObject jsonObject = new JsonObject();
+				jsonObject.addProperty(name, convertNameToVariable(variableName));
+
+				finder.conditionList.add(jsonObject);
+				variables.put(variableName, new TemplateVariable(name, jsonObject));
+				return parentExpression;
+			}
+
+			@Override
+			public TemplateExpression eq()
+			{
+				return is();
+			}
+
+			@Override
+			public TemplateExpression eq(final String variableName)
+			{
+				return is(variableName);
+			}
+
+			@Override
+			public TemplateExpression ne()
+			{
+				return ne(name);
+			}
+
+			@Override
+			public TemplateExpression ne(final String variableName)
+			{
+				return addOperationField("$ne", variableName);
+			}
+
+			@Override
+			public TemplateExpression gt()
+			{
+				return gt(name);
+			}
+
+			@Override
+			public TemplateExpression gt(final String variableName)
+			{
+				return addOperationField("$gt", variableName);
+			}
+
+			@Override
+			public TemplateExpression gte()
+			{
+				return gte(name);
+			}
+
+			@Override
+			public TemplateExpression gte(final String variableName)
+			{
+				return addOperationField("$gte", variableName);
+			}
+
+			@Override
+			public TemplateExpression lt()
+			{
+				return lt(name);
+			}
+
+			@Override
+			public TemplateExpression lt(final String variableName)
+			{
+				return addOperationField("$lt", variableName);
+			}
+
+			@Override
+			public TemplateExpression lte()
+			{
+				return lte(name);
+			}
+
+			@Override
+			public TemplateExpression lte(final String variableName)
+			{
+				return addOperationField("$lte", variableName);
+			}
+
+			@Override
+			public TemplateExpression in()
+			{
+				return in(name);
+			}
+
+			@Override
+			public TemplateExpression in(final String variableName)
+			{
+				return addOperationField("$in", variableName);
+			}
+
+			@Override
+			public TemplateExpression nin()
+			{
+				return nin(name);
+			}
+
+			@Override
+			public TemplateExpression nin(final String variableName)
+			{
+				return addOperationField("$nin", variableName);
+			}
+
+			@Override
+			public TemplateExpression exists()
+			{
+				return exists(name);
+			}
+
+			@Override
+			public TemplateExpression exists(final String variableName)
+			{
+				final JsonObject jsonObject = new JsonObject();
+				jsonObject.addProperty("$exists", true);
+
+				final JsonObject parentObject = new JsonObject();
+				parentObject.add(convertNameToVariable(variableName), jsonObject);
+
+				finder.conditionList.add(parentObject);
+				variables.put(variableName, new ExistsTemplateVariable(convertNameToVariable(variableName), parentObject));
+
+				return parentExpression;
+			}
+
+			private TemplateExpression addOperationField(final String operationName, final String variableName)
+			{
+				final JsonObject jsonObject = new JsonObject();
+				jsonObject.addProperty(operationName, convertNameToVariable(variableName));
+				return makeField(operationName, variableName, jsonObject);
+			}
+
+			private TemplateExpression makeField(final String fieldName, final String variableName, final JsonObject jsonObject)
+			{
+				final JsonObject parentObject = new JsonObject();
+				parentObject.add(name, jsonObject);
+
+				finder.conditionList.add(parentObject);
+				variables.put(variableName, new TemplateVariable(fieldName, jsonObject));
+				return parentExpression;
+			}
+		}
+
+		public class VariableBinder
+		{
+			public VariableBinder bind(final String variableName, final String value)
+			{
+				variables.get(variableName).stream().forEach(e -> e.transform(variableName, value));
+				return this;
+			}
+
+			public VariableBinder bind(final String variableName, final Number value)
+			{
+				checkArgument(!Strings.isNullOrEmpty(variableName));
+				checkArgument(value != null);
+
+				variables.get(variableName).stream().forEach(e -> e.transform(variableName, value));
+				return this;
+			}
+
+			public VariableBinder bindStringCollection(final String variableName, final Collection<String> strings)
+			{
+				final JsonArray elementArray = new JsonArray();
+				strings.stream().forEach(elementArray::add);
+
+				variables.get(variableName).stream().forEach(e -> e.transform(variableName, elementArray));
+				return this;
+			}
+
+			public VariableBinder bindNumberCollection(final String variableName, final Collection<Number> numbers)
+			{
+				final JsonArray jsonArray = new JsonArray();
+				numbers.stream().forEach(jsonArray::add);
+
+				variables.get(variableName).stream().forEach(e -> e.transform(variableName, jsonArray));
+				return this;
+			}
+
+			public JsonObject toJson()
+			{
+				return finder.makeJson();
+			}
+		}
+	}
 }

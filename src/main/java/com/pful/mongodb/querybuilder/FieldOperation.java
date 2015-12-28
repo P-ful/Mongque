@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import java.util.Collection;
 
 public class FieldOperation
-		implements Finder.ValueOperator<Finder.Statement>
+		implements ValueOperator<Finder.Statement>
 {
 
 	private String name;
@@ -22,7 +22,6 @@ public class FieldOperation
 	{
 		final JsonObject jsonObject = new JsonObject();
 		jsonObject.addProperty(name, value);
-
 		return new Finder.Statement(jsonObject);
 	}
 
@@ -31,7 +30,6 @@ public class FieldOperation
 	{
 		final JsonObject jsonObject = new JsonObject();
 		jsonObject.addProperty(name, value);
-
 		return new Finder.Statement(jsonObject);
 	}
 
@@ -39,22 +37,6 @@ public class FieldOperation
 	public Finder.Statement eq(final Number value)
 	{
 		return is(value);
-	}
-
-	private JsonObject addOperationField(final String operationName, final Number value)
-	{
-		final JsonObject operationNode = new JsonObject();
-		operationNode.addProperty(operationName, value);
-
-		return makeField(operationNode);
-	}
-
-	private JsonObject makeField(final JsonElement jsonElement)
-	{
-		final JsonObject node = new JsonObject();
-		node.add(name, jsonElement);
-
-		return node;
 	}
 
 	@Override
@@ -88,39 +70,74 @@ public class FieldOperation
 	}
 
 	@Override
-	public Finder.Statement in(final Collection<String> elements)
+	public Finder.Statement inStringCollection(final Collection<String> collection)
 	{
-		final JsonArray elementArray = new JsonArray();
-		for (final String element : elements) {
-			elementArray.add(element);
-		}
-
-		final JsonObject operationNode = new JsonObject();
-		operationNode.add("$in", elementArray);
-
-		return new Finder.Statement(makeField(operationNode));
+		final JsonArray jsonArray = new JsonArray();
+		collection.stream().forEach(jsonArray::add);
+		return in(jsonArray);
 	}
 
 	@Override
-	public Finder.Statement nin(final Collection<String> elements)
+	public Finder.Statement inNumberCollection(final Collection<Number> collection)
 	{
-		final JsonArray elementArray = new JsonArray();
-		for (final String element : elements) {
-			elementArray.add(element);
-		}
+		final JsonArray jsonArray = new JsonArray();
+		collection.stream().forEach(jsonArray::add);
+		return in(jsonArray);
+	}
 
-		final JsonObject operationNode = new JsonObject();
-		operationNode.add("$nin", elementArray);
-
-		return new Finder.Statement(makeField(operationNode));
+	private Finder.Statement in(final JsonArray jsonArray)
+	{
+		final JsonObject jsonObject = new JsonObject();
+		jsonObject.add("$in", jsonArray);
+		return new Finder.Statement(makeField(jsonObject));
 	}
 
 	@Override
-	public Finder.Statement exists(final String name)
+	public Finder.Statement ninStringCollection(final Collection<String> collection)
 	{
-		final JsonObject operationNode = new JsonObject();
-		operationNode.addProperty("$exists", name);
+		final JsonArray jsonArray = new JsonArray();
+		collection.stream().forEach(jsonArray::add);
+		return nin(jsonArray);
+	}
 
-		return new Finder.Statement(makeField(operationNode));
+	@Override
+	public Finder.Statement ninNumberCollection(final Collection<Number> collection)
+	{
+		final JsonArray jsonArray = new JsonArray();
+		collection.stream().forEach(jsonArray::add);
+		return nin(jsonArray);
+	}
+
+	private Finder.Statement nin(final JsonArray jsonArray)
+	{
+		final JsonObject jsonObject = new JsonObject();
+		jsonObject.add("$nin", jsonArray);
+		return new Finder.Statement(makeField(jsonObject));
+	}
+
+	@Override
+	public Finder.Statement exists()
+	{
+		final JsonObject existsObject = new JsonObject();
+		existsObject.addProperty("$exists", true);
+
+		final JsonObject jsonObject = new JsonObject();
+		jsonObject.add(name, existsObject);
+
+		return new Finder.Statement(makeField(jsonObject));
+	}
+
+	private JsonObject addOperationField(final String operationName, final Number value)
+	{
+		final JsonObject jsonObject = new JsonObject();
+		jsonObject.addProperty(operationName, value);
+		return makeField(jsonObject);
+	}
+
+	private JsonObject makeField(final JsonElement jsonElement)
+	{
+		final JsonObject jsonObject = new JsonObject();
+		jsonObject.add(name, jsonElement);
+		return jsonObject;
 	}
 }

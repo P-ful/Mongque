@@ -6,5 +6,4 @@ public class Field
 	{
 		return new FieldOperation(name);
 	}
-
 }
