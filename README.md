@@ -1,7 +1,7 @@
 # QueryBuilder-for-MongoDB-Gson
 ## Purpose
 
-MongoDB use JSON in order to query any document.
+MongoDB uses JSON in order to query any document.
 In some cases, it could give a difficulty to a developer because JSON object should be an nested object to express a complex query.
 The nested JSON object could make source-code readability and maintainability less.
 So some developers use officially built-in Query Builder[1] by MongoDB to improve them, but it is not easy to use.
@@ -9,7 +9,7 @@ So some developers use officially built-in Query Builder[1] by MongoDB to improv
 **We aim two goals.**
 
 1. Natural syntax to build a query for a Java developer.
-2. Ensuring the query is always correct at a compile time.
+2. Guaranteeing syntactic correctness at compile-time.
 
 ## Feature
 
