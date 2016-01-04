@@ -2,7 +2,7 @@
 ## Purpose
 
 MongoDB use JSON in order to query any document.
-In some cases, it could give a difficulty to a develover because JSON object should be an nested object to express a complex query.
+In some cases, it could give a difficulty to a developer because JSON object should be an nested object to express a complex query.
 The nested JSON object could make source-code readability and maintainability less.
 So some developers use officially built-in Query Builder[1] by MongoDB to improve them, but it is not easy to use.
 
@@ -34,13 +34,18 @@ In most cases, only variables are changed without any structural changes of a qu
 Although the structure will be not modified, all the structure should be always rebuild for the variables.
 
 So we provide 'Query Template'.
-You can define a parameterized query and call it later.
+You can define a parametrized query and call it later.
 Also you can bind your data to the variables.
+
+## Dependency
+
+- Google Gson 2.5
+- Google Guava 19.0
 
 ## Limitation
 
 We provide only Finder supporting find in MongoDB.
-Also some operators such as evaulation or geospatial are not supported in this version.
+Also some operators such as evaluation or geo-spatial are not supported in this version.
 
 ## Next
 
