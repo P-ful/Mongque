@@ -1,4 +1,4 @@
-package com.pful.mongodb.querybuilder;
+package com.pful.pico.db;
 
 public class Field
 {

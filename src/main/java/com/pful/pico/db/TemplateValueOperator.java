@@ -1,4 +1,4 @@
-package com.pful.mongodb.querybuilder;
+package com.pful.pico.db;
 
 /**
  * Created by daeyeon on 12/28/15.

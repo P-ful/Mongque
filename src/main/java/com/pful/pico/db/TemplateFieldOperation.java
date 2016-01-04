@@ -1,4 +1,4 @@
-package com.pful.mongodb.querybuilder;
+package com.pful.pico.db;
 
 import com.google.gson.JsonObject;
 

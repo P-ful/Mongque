@@ -1,7 +1,7 @@
-import com.pful.mongodb.querybuilder.Field;
-import com.pful.mongodb.querybuilder.Finder;
-import com.pful.mongodb.querybuilder.QueryBuilderException;
-import com.pful.mongodb.querybuilder.TemplateField;
+import com.pful.pico.db.Field;
+import com.pful.pico.db.Finder;
+import com.pful.pico.db.QueryBuilderException;
+import com.pful.pico.db.TemplateField;
 import org.junit.Test;
 
 import java.util.ArrayList;
