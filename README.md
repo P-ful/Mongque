@@ -104,7 +104,5 @@ Finder.openQuery("query_finding_men_with_age")
       .toJson()
 ```
 
-### Query Template
-
 ## Reference
 [1] Tutorials for an official Query Builder: http://mongodb.github.io/mongo-java-driver/2.13/getting-started/quick-tour/
