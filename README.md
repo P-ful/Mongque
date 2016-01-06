@@ -2,23 +2,23 @@
 ## Purpose
 
 MongoDB uses JSON in order to query any document.
-In some cases, it could give a difficulty to a developer because JSON object should be an nested object to express a complex query.
-The nested JSON object could make source-code readability and maintainability less.
-So some developers use officially built-in Query Builder[1] by MongoDB to improve them, but it is not easy to use.
+In some cases, it could give a difficulty to a developer especially when JSON object should be a nested form to express a complex query.
+Such nested JSON objects could make source-code readability and maintainability worse.
+So some developers try to use the built-in, official Query Builder by MongoDB [1], but it is still not so easy.
 
 **We aim two goals.**
 
-1. Natural syntax to build a query for a Java developer.
-2. Guaranteeing syntactic correctness at compile-time.
+1. Natural syntax to build a query for a Java developer
+2. Guaranteeing syntactic correctness at compile-time
 
 ## Feature
 
-- A syntax for building a query correctly.
+- A syntax for building a query correctly
 - Query Template
 
 ### A syntax for building a query correctly
 
-You can make any query following the syntax naturally.
+You can make any query by following the syntax naturally.
 We support operators in the list below.
 
 - Comparison ($eq, $gt, $gte, $lt, $lte, $ne, $in, $nin)
@@ -30,10 +30,10 @@ You can deliver your query built by QueryBuilder to MongoDB Driver.
 
 ### Query Template
 
-In most cases, only variables are changed without any structural changes of a query.
-Although the structure will be not modified, all the structure should be always rebuild for the variables.
+In most queries, only variable values are changed with no structural change at all.
+Developers have to write the same structure again and again for the variable values.
 
-So we provide 'Query Template'.
+So we provide 'Query Template' to avoid this annoying task.
 You can define a parametrized query and call it later.
 Also you can bind your data to the variables.
 
@@ -44,12 +44,12 @@ Also you can bind your data to the variables.
 
 ## Limitation
 
-We provide only Finder supporting find in MongoDB.
-Also some operators such as evaluation or geo-spatial are not supported in this version.
+We provide only 'Finder' supporting the find method in MongoDB.
+Also some operators such as evaluation or geo-spatial are not yet supported in this version.
 
 ## Next
 
-We will provide Inserter, Updater and Deleter soon and unsupported operators.
+We will provide Inserter, Updater, Deleter, and unsupported operators continuously.
 
 ## Tutorial
 
