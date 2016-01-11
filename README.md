@@ -13,12 +13,12 @@ So some developers try to use the built-in, official Query Builder by MongoDB [1
 
 ## Feature
 
-- A syntax for building a query correctly
+- Building Valid Queries
 - Query Template
 
-### A syntax for building a query correctly
+### Building Valid Queries
 
-You can make any query by following the syntax naturally.
+You can make any syntatically valid query by following the syntaxes naturally.
 We support operators in the list below.
 
 - Comparison ($eq, $gt, $gte, $lt, $lte, $ne, $in, $nin)
@@ -33,8 +33,8 @@ You can deliver your query built by QueryBuilder to MongoDB Driver.
 In most queries, only variable values are changed with no structural change at all.
 Developers have to write the same structure again and again for the variable values.
 
-So we provide 'Query Template' to avoid this annoying task.
-You can define a parametrized query and call it later.
+So we provide 'Query Template' to lesson this repetitive task.
+You can define a parametrised query and call it later.
 Also you can bind your data to the variables.
 
 ## Dependency
