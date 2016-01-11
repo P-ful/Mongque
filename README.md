@@ -33,7 +33,7 @@ You can deliver your query built by QueryBuilder to MongoDB Driver.
 In most queries, only variable values are changed with no structural change at all.
 Developers have to write the same structure again and again for the variable values.
 
-So we provide 'Query Template' to lesson this repetitive task.
+So we provide 'Query Template' to lessen this repetitive task.
 You can define a parametrised query and call it later.
 Also you can bind your data to the variables.
 
