@@ -1,10 +1,12 @@
-# QueryBuilder-for-MongoDB-Gson
+# Mongo Curry
 ## Purpose
 
 MongoDB uses JSON in order to query any document.
 In some cases, it could give a difficulty to a developer especially when JSON object should be a nested form to express a complex query.
 Such nested JSON objects could make source-code readability and maintainability worse.
 So some developers try to use the built-in, official Query Builder by MongoDB [1], but it is still not so easy.
+Also you can consider an alternative called Jongo [2].
+If you know the alternatives, please let me know :)
 
 **We aim two goals.**
 
@@ -111,3 +113,4 @@ Finder.openQuery("query_finding_men_with_age")
 
 ## Reference
 [1] Tutorials for an official Query Builder: http://mongodb.github.io/mongo-java-driver/2.13/getting-started/quick-tour/
+[2] Jongo: http://jongo.org/
