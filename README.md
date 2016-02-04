@@ -1,4 +1,4 @@
-# Mongo Curry
+# Mongque (Mongo Query)
 ## Purpose
 
 MongoDB uses JSON in order to query any document.
